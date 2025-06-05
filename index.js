@@ -1,6 +1,29 @@
 require("dotenv").config();
 const { io } = require("socket.io-client");
 const supabase = require("./supabase");
+const sendChat = require("./telegram");
+
+let currentStreak = 0; // Global or file-level variable
+let highestStreak = 0; // Optional, to track max ever in-memory
+
+const updateStreak = (multiplier) => {
+  if (multiplier < 2) {
+    currentStreak++;
+    console.log("🔥 Under 2x streak:", currentStreak);
+
+    // Send a message if streak reaches a certain threshold
+    if (currentStreak >= 2) {
+      sendChat(`🚨 ${currentStreak} under 2x streak detected!`);
+    }
+
+    // Update highest streak ever (if you're not using DB for this)
+    if (currentStreak > highestStreak) {
+      highestStreak = currentStreak;
+    }
+  } else {
+    currentStreak = 0; // Reset streak when multiplier ≥ 2
+  }
+};
 
 const socket = io("wss://wspublic-psychic.msport.com", {
   path: "/psychic-demo/socket.io",
@@ -33,6 +56,8 @@ socket.on("bg_r_e", async (data) => {
   if (!multiplier) return;
 
   console.log("🎯 Multiplier:", multiplier);
+
+  updateStreak(multiplier); // Call the streak logic
 
   const { error } = await supabase
     .from("round_results")
