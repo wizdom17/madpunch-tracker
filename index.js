@@ -6,14 +6,14 @@ const sendChat = require("./telegram");
 let currentStreak = 0; // Global or file-level variable
 let highestStreak = 0; // Optional, to track max ever in-memory
 
-const updateStreak = (multiplier) => {
+const updateStreak = async (multiplier) => {
   if (multiplier < 2) {
     currentStreak++;
     console.log("🔥 Under 2x streak:", currentStreak);
 
     // Send a message if streak reaches a certain threshold
-    if (currentStreak >= 2) {
-      sendChat(`🚨 ${currentStreak} under 2x streak detected!`);
+    if (currentStreak >= 5) {
+      await sendChat(`🚨 ${currentStreak} under 2x streak detected!`);
     }
 
     // Update highest streak ever (if you're not using DB for this)
@@ -21,6 +21,16 @@ const updateStreak = (multiplier) => {
       highestStreak = currentStreak;
     }
   } else {
+    if (currentStreak >= 10) {
+      const { error } = await supabase
+        .from("high_streaks")
+        .insert([{ streak: currentStreak }]);
+      if (error) {
+        console.error("❌ Failed to save high streak:", error);
+      } else {
+        console.log("📌 Saved high streak of", currentStreak);
+      }
+    }
     currentStreak = 0; // Reset streak when multiplier ≥ 2
   }
 };
@@ -57,7 +67,7 @@ socket.on("bg_r_e", async (data) => {
 
   console.log("🎯 Multiplier:", multiplier);
 
-  updateStreak(multiplier); // Call the streak logic
+  await updateStreak(multiplier); // Call the streak logic
 
   const { error } = await supabase
     .from("round_results")
